@@ -1,4 +1,23 @@
-from decimal import Decimal as D
+import warnings
+from decimal import Decimal
+
+
+class WarningDecimal(Decimal):
+
+    def __mul__(self, other, context=None):
+        warnings.warn(
+            "You are multiplying a price. You should use "
+            "get_price(quantity) instead.", RuntimeWarning)
+        return super(WarningDecimal, self).__mul__(other, context)
+
+    __rmul__ = __mul__
+
+    def quantize(self, *args, **kwargs):
+        # quantized decimals should still warn
+        result = super(WarningDecimal, self).quantize(*args, **kwargs)
+        return WarningDecimal(result)
+
+WD = WarningDecimal
 
 
 class TaxNotKnown(Exception):
@@ -30,7 +49,7 @@ class Price(object):
     def __init__(self, currency, excl_tax, incl_tax=None, tax=None,
                  exponent=None):
         self.currency = currency
-        self.exponent = exponent or D('0.01')
+        self.exponent = exponent or Decimal('0.01')
         self._excl_tax = excl_tax
         if incl_tax is not None:
             self._incl_tax = incl_tax
@@ -40,12 +59,12 @@ class Price(object):
     @property
     def excl_tax(self):
         if self._excl_tax is not None:
-            return D(self._excl_tax).quantize(self.exponent)
+            return WD(self._excl_tax).quantize(self.exponent)
 
     @property
     def tax(self):
         if self.is_tax_known:
-            return (self.incl_tax - self.excl_tax).quantize(self.exponent)
+            return WD(self.incl_tax - self.excl_tax).quantize(self.exponent)
         raise TaxNotKnown
 
     @tax.setter
@@ -60,7 +79,7 @@ class Price(object):
     @property
     def incl_tax(self):
         if self.is_tax_known:
-            return D(self._incl_tax).quantize(self.exponent)
+            return WD(self._incl_tax).quantize(self.exponent)
         raise TaxNotKnown
 
     @property

@@ -1,4 +1,5 @@
 from decimal import Decimal as D
+import warnings
 
 from django.test import TestCase
 
@@ -24,3 +25,11 @@ class TestPriceObject(TestCase):
     def test_quantizes_as_late_as_possible(self):
         price = Price('USD', D('6.004'), tax=D('0.004'))
         self.assertEqual(D('6.01'), price.incl_tax)
+
+    def test_warns_when_multiplying(self):
+        price = Price('USD', D('6'))
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            price.excl_tax * 5
+            5 * price.excl_tax
+            self.assertTrue(w[0].category == w[1].category == RuntimeWarning)
